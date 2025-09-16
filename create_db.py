@@ -1,5 +1,5 @@
-from database import Base, engine
-from models import User, Ticket, Comment
+from app.dependencies.database import Base, engine
+from app.models import User, Ticket, Comment
 
 # Cria todas as tabelas definidas nos modelos
 Base.metadata.create_all(bind=engine)   
