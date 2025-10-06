@@ -32,6 +32,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     full_name = Column(String)
+    avatar_url = Column(String, nullable=True)
     role = Column(Enum(RoleEnum), default=RoleEnum.user)
     is_active = Column(Boolean, default=True)
     is_approved = Column(Boolean, default=False)  # Para aprovação de técnicos

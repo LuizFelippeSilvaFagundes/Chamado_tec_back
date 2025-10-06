@@ -85,6 +85,25 @@ class UserService:
         return db_user
 
     @staticmethod
+    def update_user_password(db: Session, user_id: int, new_hashed_password: str) -> Optional[User]:
+        """Atualiza a senha (hash) do usuário"""
+        db_user = UserService.get_user_by_id(db, user_id)
+        if db_user:
+            db_user.hashed_password = new_hashed_password
+            db.commit()
+            db.refresh(db_user)
+        return db_user
+
+    @staticmethod
+    def update_user_avatar(db: Session, user_id: int, avatar_url: str) -> Optional[User]:
+        db_user = UserService.get_user_by_id(db, user_id)
+        if db_user:
+            db_user.avatar_url = avatar_url
+            db.commit()
+            db.refresh(db_user)
+        return db_user
+
+    @staticmethod
     def check_user_exists(db: Session, username: str, email: str) -> Tuple[bool, str]:
         """Verifica se usuário já existe e retorna mensagem de erro"""
         existing_user = UserService.get_user_by_username(db, username)
