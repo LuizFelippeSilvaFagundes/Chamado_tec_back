@@ -1,0 +1,72 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Local configuration/environment
+.env
+.env.*
+*.local
+
+# SQLite / local databases
+*.sqlite3
+*.db
+users.db
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.coverage.xml
+.cache/
+
+# Type checkers / linters
+.mypy_cache/
+.pytype/
+.pylint.d/
+.ruff_cache/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uvicorn/Watchfiles reload artifacts
+**/__pycache__/
+
+# Alembic (keep versions, ignore local logs/temp)
+alembic/*.log
+
+# Node (if any frontend builds land here)
+node_modules/
+
+# Misc
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Uploaded media
+static/avatars/*
+!static/avatars/.gitkeep
