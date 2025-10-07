@@ -17,7 +17,7 @@ class UserService:
             hashed_password=hashed_password,
             role=user.role,
             is_active=True,
-            is_approved=True if user.role == "user" else False,  # Usuários normais são aprovados automaticamente
+            is_approved=True if str(user.role) == "servidor" else False,  # Servidores são aprovados automaticamente
             # Campos específicos de técnico
             employee_id=user.employee_id,
             department=user.department,
@@ -40,8 +40,10 @@ class UserService:
         return db.query(User).filter(User.username == username).first()
 
     @staticmethod
-    def get_user_by_email(db: Session, email: str) -> Optional[User]:
+    def get_user_by_email(db: Session, email: Optional[str]) -> Optional[User]:
         """Busca usuário por email"""
+        if not email:
+            return None
         return db.query(User).filter(User.email == email).first()
 
     @staticmethod
@@ -104,7 +106,7 @@ class UserService:
         return db_user
 
     @staticmethod
-    def check_user_exists(db: Session, username: str, email: str) -> Tuple[bool, str]:
+    def check_user_exists(db: Session, username: str, email: Optional[str]) -> Tuple[bool, str]:
         """Verifica se usuário já existe e retorna mensagem de erro"""
         existing_user = UserService.get_user_by_username(db, username)
         if existing_user:

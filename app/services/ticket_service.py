@@ -11,8 +11,12 @@ class TicketService:
     @staticmethod
     def create_ticket(db: Session, ticket: TicketCreate, user_id: int) -> Ticket:
         """Cria um novo ticket"""
+        # Remover campos que não existem no modelo Ticket
+        ticket_data = ticket.dict()
+        ticket_data.pop('username', None)  # Remove username se existir
+        
         db_ticket = Ticket(
-            **ticket.dict(),
+            **ticket_data,
             user_id=user_id
         )
         db.add(db_ticket)

@@ -20,7 +20,7 @@ class StatusEnum(enum.Enum):
     closed = "closed"
 
 class RoleEnum(enum.Enum):
-    user = "user"
+    servidor = "servidor"
     technician = "technician"
     admin = "admin"
 
@@ -29,11 +29,11 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String)
     full_name = Column(String)
     avatar_url = Column(String, nullable=True)
-    role = Column(Enum(RoleEnum), default=RoleEnum.user)
+    role = Column(Enum(RoleEnum), default=RoleEnum.servidor)
     is_active = Column(Boolean, default=True)
     is_approved = Column(Boolean, default=False)  # Para aprovação de técnicos
     created_at = Column(DateTime, default=datetime.utcnow)

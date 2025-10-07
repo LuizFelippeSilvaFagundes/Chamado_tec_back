@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.services.auth_service import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.user_service import UserService
-from app.schemas import UserLogin, UserCreate, TechRegister, UserResponse
+from app.schemas import UserLogin, UserCreate, TechRegister, UserResponse, ServidorRegister, RoleEnum
 
 class AuthController:
     @staticmethod
@@ -16,6 +16,25 @@ class AuthController:
         
         # Criar usuário
         db_user = UserService.create_user(db, user)
+        return UserResponse.from_orm(db_user)
+
+    @staticmethod
+    def register_servidor(db: Session, payload: ServidorRegister) -> UserResponse:
+        """Registra um novo servidor com campos mínimos"""
+        # Verificar existência por username (email é opcional)
+        exists, error_msg = UserService.check_user_exists(db, payload.username, None)
+        if exists:
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        user_data = UserCreate(
+            username=payload.username,
+            email=None,
+            full_name=payload.full_name,
+            password=payload.password,
+            role=RoleEnum.servidor,
+            phone=payload.phone,
+        )
+        db_user = UserService.create_user(db, user_data)
         return UserResponse.from_orm(db_user)
 
     @staticmethod

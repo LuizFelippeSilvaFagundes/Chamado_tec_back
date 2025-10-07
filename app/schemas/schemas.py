@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, field_validator
+from email_validator import validate_email, EmailNotValidError
 from typing import Optional, List, Union
 from datetime import datetime
 from enum import Enum
@@ -17,19 +18,31 @@ class StatusEnum(str, Enum):
     closed = "closed"
 
 class RoleEnum(str, Enum):
-    user = "user"
+    servidor = "servidor"
     technician = "technician"
     admin = "admin"
 
 # Schemas de Usuário
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: Optional[str] = None
     full_name: str
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_relaxed(cls, value: Optional[str]) -> Optional[str]:
+        # Permite omitir email na criação e atualização.
+        if value is None or value == "":
+            return None
+        try:
+            result = validate_email(value, check_deliverability=False)
+            return result.normalized
+        except EmailNotValidError as exc:
+            raise ValueError(str(exc))
 
 class UserCreate(UserBase):
     password: str
-    role: RoleEnum = RoleEnum.user
+    role: RoleEnum = RoleEnum.servidor
     # Campos opcionais para técnicos
     employee_id: Optional[str] = None
     department: Optional[str] = None
@@ -53,6 +66,12 @@ class TechRegister(UserBase):
     experience_years: Optional[int] = None
     availability: str = "full-time"
     notes: Optional[str] = None
+
+class ServidorRegister(BaseModel):
+    username: str
+    full_name: str
+    phone: str
+    password: str
 
 class UserLogin(BaseModel):
     username: str
@@ -80,7 +99,7 @@ class UserResponse(UserBase):
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     emergency_contact: Optional[str] = None
     certifications: Optional[str] = None
@@ -90,6 +109,17 @@ class UserUpdate(BaseModel):
     specialty: Optional[List[str]] = None
     is_active: Optional[bool] = None
     is_approved: Optional[bool] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email_relaxed_optional(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        try:
+            result = validate_email(value, check_deliverability=False)
+            return result.normalized
+        except EmailNotValidError as exc:
+            raise ValueError(str(exc))
 
 # Schemas de Ticket
 class TicketBase(BaseModel):
