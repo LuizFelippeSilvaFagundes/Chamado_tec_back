@@ -3,7 +3,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.services.auth_service import AuthService, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.services.user_service import UserService
-from app.schemas import UserLogin, UserCreate, TechRegister, UserResponse, ServidorRegister, RoleEnum
+from app.schemas import UserLogin, UserCreate, TechRegister, UserResponse, ServidorRegister, AdminRegister, RoleEnum
 
 class AuthController:
     @staticmethod
@@ -90,6 +90,25 @@ class AuthController:
             "token_type": "bearer",
             "user": UserResponse.from_orm(user)
         }
+
+    @staticmethod
+    def register_admin(db: Session, admin: AdminRegister) -> UserResponse:
+        """Registra um novo administrador"""
+        # Verificar se usuário já existe
+        exists, error_msg = UserService.check_user_exists(db, admin.username, admin.email)
+        if exists:
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # Criar usuário admin
+        user_data = UserCreate(
+            username=admin.username,
+            email=admin.email,
+            full_name=admin.full_name,
+            password=admin.password,
+            role=RoleEnum.admin,
+        )
+        db_user = UserService.create_user(db, user_data)
+        return UserResponse.from_orm(db_user)
 
     @staticmethod
     def get_current_user_info(user) -> UserResponse:

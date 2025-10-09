@@ -16,11 +16,17 @@ class AuthService:
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """Verifica se a senha plana corresponde ao hash"""
+        # Bcrypt tem limite de 72 bytes - truncar se necessário
+        if len(plain_password.encode('utf-8')) > 72:
+            plain_password = plain_password[:72]
         return pwd_context.verify(plain_password, hashed_password)
 
     @staticmethod
     def get_password_hash(password: str) -> str:
         """Gera hash da senha"""
+        # Bcrypt tem limite de 72 bytes - truncar se necessário
+        if len(password.encode('utf-8')) > 72:
+            password = password[:72]
         return pwd_context.hash(password)
 
     @staticmethod

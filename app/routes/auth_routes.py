@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
 from app.controllers import AuthController
-from app.schemas import ServidorRegister
+from app.schemas import ServidorRegister, AdminRegister
 from app.models import User
 from app.schemas import UserCreate, UserLogin, TechRegister, UserResponse
 
@@ -17,6 +17,11 @@ def register(user: ServidorRegister, db: Session = Depends(get_db)):
 def register_technician(tech: TechRegister, db: Session = Depends(get_db)):
     """Registro de técnicos"""
     return AuthController.register_technician(db, tech)
+
+@router.post("/admin-register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register_admin(admin: AdminRegister, db: Session = Depends(get_db)):
+    """Registro de administradores"""
+    return AuthController.register_admin(db, admin)
 
 @router.post("/login", include_in_schema=True)
 def login(user: UserLogin, db: Session = Depends(get_db)):

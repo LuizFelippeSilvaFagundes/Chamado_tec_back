@@ -58,3 +58,30 @@ class AdminController:
         hashed = AuthService.get_password_hash(new_password)
         UserService.update_user_password(db, user_id, hashed)
         return {"detail": "Senha redefinida"}
+
+    @staticmethod
+    def get_open_tickets(db: Session) -> List[TicketResponse]:
+        """Obtém todos os tickets abertos para atribuição"""
+        tickets = TicketService.get_tickets_by_status(db, "open")
+        return [TicketResponse.from_orm(ticket) for ticket in tickets]
+
+    @staticmethod
+    def get_technicians(db: Session) -> List[UserResponse]:
+        """Obtém todos os técnicos para atribuição"""
+        technicians = UserService.get_users_by_role(db, "technician")
+        return [UserResponse.from_orm(tech) for tech in technicians]
+
+    @staticmethod
+    def assign_ticket_to_technician(db: Session, ticket_id: int, technician_id: int) -> TicketResponse:
+        """Atribui um ticket a um técnico"""
+        # Verificar se o técnico existe
+        technician = UserService.get_user_by_id(db, technician_id)
+        if not technician or technician.role != "technician":
+            raise HTTPException(status_code=404, detail="Técnico não encontrado")
+        
+        # Atribuir ticket
+        ticket = TicketService.assign_ticket_to_technician(db, ticket_id, technician_id)
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket não encontrado")
+        
+        return TicketResponse.from_orm(ticket)

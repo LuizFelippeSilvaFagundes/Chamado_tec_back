@@ -8,22 +8,16 @@ from app.routes import (
     user_router,
     ticket_router, 
     tech_router,
-    admin_router
+    admin_router,
+    avatar_router,
+    attachment_router
 )
 
 # === CRIAÇÃO AUTOMÁTICA DO BANCO E TABELAS ===
 def init_db():
-    # Cria todas as tabelas se não existirem
+    """Cria todas as tabelas se não existirem"""
     Base.metadata.create_all(bind=engine)
-    # Migração simples: garantir coluna avatar_url em users
-    with engine.connect() as conn:
-        try:
-            cols = conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()
-            col_names = {c[1] for c in cols}
-            if 'avatar_url' not in col_names:
-                conn.exec_driver_sql("ALTER TABLE users ADD COLUMN avatar_url VARCHAR")
-        except Exception:
-            pass                                                     
+    print("✅ Banco de dados inicializado!")
 
 # Inicializa o banco ao iniciar o app
 init_db()
@@ -52,6 +46,8 @@ app.include_router(user_router)
 app.include_router(ticket_router)
 app.include_router(tech_router)
 app.include_router(admin_router)
+app.include_router(avatar_router)
+app.include_router(attachment_router)
 
 # Arquivos estáticos (avatars)
 # Garante que a pasta 'static' exista e usa caminho absoluto para evitar erros

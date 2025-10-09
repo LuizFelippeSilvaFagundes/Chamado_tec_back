@@ -73,6 +73,12 @@ class ServidorRegister(BaseModel):
     phone: str
     password: str
 
+class AdminRegister(BaseModel):
+    username: str
+    email: str
+    full_name: str
+    password: str
+
 class UserLogin(BaseModel):
     username: str
     password: str
@@ -83,6 +89,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_approved: bool
     created_at: datetime
+    avatar_url: Optional[str] = None
     # Campos específicos de técnico
     employee_id: Optional[str] = None
     department: Optional[str] = None
@@ -121,6 +128,14 @@ class UserUpdate(BaseModel):
         except EmailNotValidError as exc:
             raise ValueError(str(exc))
 
+# Schema de Anexo
+class AttachmentInfo(BaseModel):
+    filename: str
+    stored_filename: str
+    url: str
+    size: int
+    type: str
+
 # Schemas de Ticket
 class TicketBase(BaseModel):
     title: str
@@ -130,7 +145,7 @@ class TicketBase(BaseModel):
     priority: PriorityEnum = PriorityEnum.medium
     equipment_id: Optional[str] = None
     estimated_time: Optional[int] = None
-    attachments: Optional[List[str]] = None
+    attachments: Optional[List[AttachmentInfo]] = None
 
 class TicketCreate(TicketBase):
     pass
