@@ -17,7 +17,7 @@ from app.routes import (
 def init_db():
     """Cria todas as tabelas se não existirem"""
     Base.metadata.create_all(bind=engine)
-    print("✅ Banco de dados inicializado!")
+    print("Banco de dados inicializado!")
 
 # Inicializa o banco ao iniciar o app
 init_db()
