@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.services.user_service import UserService
 from app.services.ticket_service import TicketService
-from app.models import User
+from app.models import User, StatusEnum
 from app.schemas import UserResponse, TicketResponse
 from app.services.auth_service import AuthService
 
@@ -33,8 +33,13 @@ class AdminController:
         """Atribui ticket a um técnico"""
         # Verificar se o técnico existe
         technician = UserService.get_user_by_id(db, technician_id)
-        if not technician or technician.role not in ["technician", "admin"]:
+        if not technician:
             raise HTTPException(status_code=404, detail="Técnico não encontrado")
+        
+        # Verificar se é técnico ou admin (ambos podem receber atribuições)
+        role_str = str(technician.role.value) if hasattr(technician.role, 'value') else str(technician.role)
+        if role_str not in ["technician", "admin"]:
+            raise HTTPException(status_code=400, detail="Usuário não é um técnico ou admin")
         
         # Atribuir ticket
         ticket = TicketService.assign_ticket_to_technician(db, ticket_id, technician_id)
@@ -62,7 +67,7 @@ class AdminController:
     @staticmethod
     def get_open_tickets(db: Session) -> List[TicketResponse]:
         """Obtém todos os tickets abertos para atribuição"""
-        tickets = TicketService.get_tickets_by_status(db, "open")
+        tickets = TicketService.get_tickets_by_status(db, StatusEnum.open)
         return [TicketResponse.from_orm(ticket) for ticket in tickets]
 
     @staticmethod
@@ -76,11 +81,16 @@ class AdminController:
         """Atribui um ticket a um técnico"""
         # Verificar se o técnico existe
         technician = UserService.get_user_by_id(db, technician_id)
-        if not technician or technician.role != "technician":
+        if not technician:
             raise HTTPException(status_code=404, detail="Técnico não encontrado")
         
+        # Verificar se é técnico ou admin (ambos podem receber atribuições)
+        role_str = str(technician.role.value) if hasattr(technician.role, 'value') else str(technician.role)
+        if role_str not in ["technician", "admin"]:
+            raise HTTPException(status_code=400, detail="Usuário não é um técnico ou admin")
+        
         # Atribuir ticket
-        ticket = TicketService.assign_ticket_to_technician(db, ticket_id, technician_id)
+        ticket = TicketService.assign_ticket_to_technician(db, ticket_id, technician_id, assigned_by_admin=True)
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket não encontrado")
         

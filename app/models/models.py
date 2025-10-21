@@ -71,6 +71,7 @@ class Ticket(Base):
     sla_deadline = Column(DateTime, nullable=True)
     estimated_time = Column(Integer, nullable=True)  # em minutos
     attachments = Column(JSON, nullable=True)  # Lista de anexos
+    assigned_by_admin = Column(Boolean, default=False)  # Indica se foi atribuído pelo admin
     
     # Relacionamento com usuário
     user_id = Column(Integer, ForeignKey("users.id"))

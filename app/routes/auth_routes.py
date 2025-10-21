@@ -4,7 +4,7 @@ from app.dependencies import get_db
 from app.controllers import AuthController
 from app.schemas import ServidorRegister, AdminRegister
 from app.models import User
-from app.schemas import UserCreate, UserLogin, TechRegister, UserResponse
+from app.schemas import     UserCreate, UserLogin, TechRegister, UserResponse
 
 router = APIRouter(tags=["Authentication"])
 

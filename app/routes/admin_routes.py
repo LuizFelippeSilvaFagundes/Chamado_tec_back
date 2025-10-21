@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.dependencies import get_db
+from app.dependencies.auth_dependencies import get_current_user
 from app.controllers import AdminController
 from app.models import User
 from app.schemas import UserResponse, TicketResponse
@@ -16,8 +17,17 @@ def get_pending_technicians(db: Session = Depends(get_db)):
     return AdminController.get_pending_technicians(db)
 
 @router.post("/technicians/{technician_id}/approve", response_model=UserResponse)
-def approve_technician(technician_id: int, db: Session = Depends(get_db)):
-    """Aprovar técnico"""
+def approve_technician(
+    technician_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Aprovar técnico (requer autenticação de admin)"""
+    # Verificar se é admin
+    role_str = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado: apenas administradores")
+    
     return AdminController.approve_technician(db, technician_id)
 
 @router.get("/tickets", response_model=List[TicketResponse])
@@ -45,8 +55,16 @@ def list_servidores(db: Session = Depends(get_db)):
     return [UserResponse.from_orm(u) for u in users]
 
 @router.get('/tecnicos', response_model=List[UserResponse])
-def list_technicians(db: Session = Depends(get_db)):
-    """Lista apenas técnicos"""
+def list_technicians(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Lista apenas técnicos (requer autenticação de admin)"""
+    # Verificar se é admin
+    role_str = str(current_user.role.value) if hasattr(current_user.role, 'value') else str(current_user.role)
+    if role_str != "admin":
+        raise HTTPException(status_code=403, detail="Acesso negado: apenas administradores")
+    
     users = UserService.get_users_by_role(db, "technician")
     return [UserResponse.from_orm(u) for u in users]
 
@@ -81,3 +99,24 @@ def assign_ticket(ticket_id: int, payload: dict, db: Session = Depends(get_db)):
     if not technician_id:
         raise HTTPException(status_code=400, detail="technician_id é obrigatório")
     return AdminController.assign_ticket_to_technician(db, ticket_id, technician_id)
+
+# === NOVOS ENDPOINTS PARA O SISTEMA DE ADMIN ===
+
+@router.get('/tickets/open', response_model=List[TicketResponse])
+def get_open_tickets_for_admin(db: Session = Depends(get_db)):
+    """Obtém tickets abertos não atribuídos para o admin gerenciar"""
+    from app.services.ticket_service import TicketService
+    tickets = TicketService.get_open_tickets_for_admin(db)
+    return [TicketResponse.from_orm(ticket) for ticket in tickets]
+
+@router.get('/technicians', response_model=List[UserResponse])
+def get_technicians_for_assignment(db: Session = Depends(get_db)):
+    """Obtém técnicos disponíveis para atribuição"""
+    return AdminController.get_technicians(db)
+
+@router.get('/tickets/assigned', response_model=List[TicketResponse])
+def get_assigned_tickets_for_admin(db: Session = Depends(get_db)):
+    """Obtém tickets que já foram atribuídos a técnicos"""
+    from app.services.ticket_service import TicketService
+    tickets = TicketService.get_all_assigned_tickets(db)
+    return [TicketResponse.from_orm(ticket) for ticket in tickets]

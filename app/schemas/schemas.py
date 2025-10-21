@@ -172,6 +172,7 @@ class TicketResponse(TicketBase):
     assigned_technician_id: Optional[int] = None
     assigned_technician: Optional[UserResponse] = None
     sla_deadline: Optional[datetime] = None
+    assigned_by_admin: Optional[bool] = False
     
     class Config:
         from_attributes = True

@@ -63,7 +63,7 @@ class AuthService:
         payload = AuthService.decode_token(token)
         if not payload:
             return None
-            
+        
         username: str = payload.get("sub")
         user_id: int = payload.get("user_id")
         if username is None or user_id is None:
@@ -79,7 +79,8 @@ class AuthService:
             return None
         
         # Verificar se técnicos estão aprovados
-        if user.role == "technician" and not user.is_approved:
+        role_str = str(user.role.value) if hasattr(user.role, 'value') else str(user.role)
+        if role_str == "technician" and not user.is_approved:
             return None
         
         return user

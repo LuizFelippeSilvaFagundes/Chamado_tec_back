@@ -2,7 +2,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from datetime import datetime
-from app.models import User, Ticket, Comment, TicketHistory
+from app.models import User, Ticket, Comment, TicketHistory, StatusEnum
 from app.schemas import (
     TicketCreate, TicketUpdate, CommentCreate, TicketHistoryCreate
 )
@@ -67,7 +67,8 @@ class TicketService:
         
         # Atribuir ao técnico
         ticket.assigned_technician_id = technician_id
-        ticket.status = "in-progress"
+        ticket.status = StatusEnum.in_progress
+        ticket.assigned_by_admin = False  # Auto-atribuído pelo técnico
         db.commit()
         db.refresh(ticket)
         
@@ -76,7 +77,7 @@ class TicketService:
             db, 
             TicketHistoryCreate(
                 action="self_assigned",
-                description=f"Técnico assumiu o ticket"
+                description=f"Técnico assumiu o ticket da fila"
             ), 
             ticket_id, 
             f"Técnico ID {technician_id}"
@@ -89,8 +90,11 @@ class TicketService:
         return db.query(Ticket).offset(skip).limit(limit).all()
 
     @staticmethod
-    def get_tickets_by_status(db: Session, status: str, skip: int = 0, limit: int = 100) -> List[Ticket]:
+    def get_tickets_by_status(db: Session, status, skip: int = 0, limit: int = 100) -> List[Ticket]:
         """Busca tickets por status"""
+        # Converter string para Enum se necessário
+        if isinstance(status, str):
+            status = StatusEnum[status.replace("-", "_")]
         return db.query(Ticket).filter(Ticket.status == status).offset(skip).limit(limit).all()
 
     @staticmethod
@@ -117,21 +121,25 @@ class TicketService:
         return False
 
     @staticmethod
-    def assign_ticket_to_technician(db: Session, ticket_id: int, technician_id: int) -> Optional[Ticket]:
+    def assign_ticket_to_technician(db: Session, ticket_id: int, technician_id: int, assigned_by_admin: bool = False) -> Optional[Ticket]:
         """Atribui ticket a um técnico"""
         ticket = TicketService.get_ticket_by_id(db, ticket_id)
         if ticket:
             ticket.assigned_technician_id = technician_id
-            ticket.status = "in-progress"
+            ticket.status = StatusEnum.in_progress
+            ticket.assigned_by_admin = assigned_by_admin
             db.commit()
             db.refresh(ticket)
             
             # Adicionar ao histórico
+            action = "admin_assigned" if assigned_by_admin else "assigned"
+            description = f"Ticket atribuído pelo admin ao técnico ID {technician_id}" if assigned_by_admin else f"Ticket atribuído ao técnico ID {technician_id}"
+            
             TicketService.create_ticket_history(
                 db, 
                 TicketHistoryCreate(
-                    action="assigned",
-                    description=f"Ticket atribuído ao técnico ID {technician_id}"
+                    action=action,
+                    description=description
                 ), 
                 ticket_id, 
                 "Sistema"
@@ -199,7 +207,8 @@ class TicketService:
             return True
         
         # Admins têm acesso a todos
-        if user.role == "admin":
+        role_str = str(user.role.value) if hasattr(user.role, 'value') else str(user.role)
+        if role_str == "admin":
             return True
         
         return False
@@ -212,7 +221,8 @@ class TicketService:
             return True
         
         # Admins têm acesso a todos
-        if technician.role == "admin":
+        role_str = str(technician.role.value) if hasattr(technician.role, 'value') else str(technician.role)
+        if role_str == "admin":
             return True
         
         return False
@@ -223,13 +233,13 @@ class TicketService:
         """Obtém estatísticas do dashboard do técnico"""
         total_tickets = db.query(Ticket).filter(Ticket.assigned_technician_id == technician_id).count()
         pending_tickets = db.query(Ticket).filter(
-            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == "pending")
+            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == StatusEnum.pending)
         ).count()
         in_progress_tickets = db.query(Ticket).filter(
-            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == "in-progress")
+            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == StatusEnum.in_progress)
         ).count()
         resolved_tickets = db.query(Ticket).filter(
-            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == "resolved")
+            and_(Ticket.assigned_technician_id == technician_id, Ticket.status == StatusEnum.resolved)
         ).count()
         
         # Tickets em atraso (SLA vencido)
@@ -237,7 +247,7 @@ class TicketService:
             and_(
                 Ticket.assigned_technician_id == technician_id,
                 Ticket.sla_deadline < datetime.utcnow(),
-                Ticket.status.in_(["pending", "in-progress"])
+                Ticket.status.in_([StatusEnum.pending, StatusEnum.in_progress])
             )
         ).count()
         
@@ -252,3 +262,47 @@ class TicketService:
             "overdue_tickets": overdue_tickets,
             "avg_resolution_time": avg_resolution_time
         }
+
+    # === NOVOS MÉTODOS PARA O SISTEMA DE ADMIN ===
+    
+    @staticmethod
+    def get_open_tickets_for_admin(db: Session, skip: int = 0, limit: int = 100) -> List[Ticket]:
+        """Busca tickets abertos não atribuídos para o admin"""
+        return db.query(Ticket).filter(
+            and_(
+                Ticket.status == StatusEnum.open,
+                Ticket.assigned_technician_id == None
+            )
+        ).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_tickets_assigned_by_admin(db: Session, technician_id: int, skip: int = 0, limit: int = 100) -> List[Ticket]:
+        """Busca tickets atribuídos pelo admin para um técnico específico"""
+        return db.query(Ticket).filter(
+            and_(
+                Ticket.assigned_technician_id == technician_id,
+                Ticket.assigned_by_admin == True
+            )
+        ).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_technician_assigned_tickets(db: Session, technician_id: int, skip: int = 0, limit: int = 100) -> List[Ticket]:
+        """Busca todos os tickets atribuídos a um técnico (admin + auto-atribuídos)"""
+        return db.query(Ticket).filter(Ticket.assigned_technician_id == technician_id).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_available_tickets_for_tech_queue(db: Session, skip: int = 0, limit: int = 100) -> List[Ticket]:
+        """Busca tickets disponíveis na fila para técnicos pegarem"""
+        return db.query(Ticket).filter(
+            and_(
+                Ticket.status == StatusEnum.open,
+                Ticket.assigned_technician_id == None
+            )
+        ).offset(skip).limit(limit).all()
+
+    @staticmethod
+    def get_all_assigned_tickets(db: Session, skip: int = 0, limit: int = 100) -> List[Ticket]:
+        """Busca todos os tickets que foram atribuídos a técnicos"""
+        return db.query(Ticket).filter(
+            Ticket.assigned_technician_id != None
+        ).offset(skip).limit(limit).all()

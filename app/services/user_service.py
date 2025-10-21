@@ -67,10 +67,12 @@ class UserService:
     def approve_technician(db: Session, technician_id: int) -> Optional[User]:
         """Aprova um técnico"""
         technician = UserService.get_user_by_id(db, technician_id)
-        if technician and technician.role == "technician":
-            technician.is_approved = True
-            db.commit()
-            db.refresh(technician)
+        if technician:
+            role_str = str(technician.role.value) if hasattr(technician.role, 'value') else str(technician.role)
+            if role_str == "technician":
+                technician.is_approved = True
+                db.commit()
+                db.refresh(technician)
         return technician
 
     @staticmethod
