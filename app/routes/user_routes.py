@@ -36,7 +36,7 @@ def upload_avatar(db: Session = Depends(get_db), file: UploadFile = File(...)):
     return {"message": "Endpoint desabilitado - autenticação removida"}
 
 @router.get("/todos", response_model=List[UserResponse])
-def list_all_users(db: Session = Depends(get_db)):
-    """Lista usuários de todas as áreas (servidores, técnicos e admins) visível a qualquer usuário autenticado"""
-    users = UserService.get_users_by_role(db, "servidor") + UserService.get_users_by_role(db, "technician") + UserService.get_users_by_role(db, "admin")
+def list_all_servidores(db: Session = Depends(get_db)):
+    """Lista apenas servidores (role=servidor)"""
+    users = UserService.get_users_by_role(db, "servidor")
     return [UserResponse.from_orm(u) for u in users]

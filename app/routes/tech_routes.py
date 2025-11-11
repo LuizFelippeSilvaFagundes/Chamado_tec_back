@@ -137,6 +137,12 @@ def list_users_by_role(
     users = UserService.get_users_by_role(db, "servidor") + UserService.get_users_by_role(db, "technician") + UserService.get_users_by_role(db, "admin")
     return [UserResponse.from_orm(u) for u in users]
 
+@router.get("/todos", response_model=List[UserResponse])
+def list_all_tecnicos(db: Session = Depends(get_db)):
+    """Lista apenas técnicos (role=technician)"""
+    users = UserService.get_users_by_role(db, "technician")
+    return [UserResponse.from_orm(u) for u in users]
+
 @router.get("/tickets/{ticket_id}", response_model=TicketWithHistory)
 def get_tech_ticket_details(
     ticket_id: int,

@@ -7,14 +7,14 @@ from dotenv import load_dotenv
 # Carrega variáveis de ambiente do arquivo .env
 load_dotenv()
 
-# Usa PostgreSQL (Supabase) se DATABASE_URL estiver definida, senão usa SQLite local
+# Usa PostgreSQL (Neon/Supabase) se DATABASE_URL estiver definida, senão usa SQLite local
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./users.db")
 
 # Configuração específica para SQLite (retrocompatibilidade)
 if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
-    # Para PostgreSQL (Supabase) não precisa de connect_args especiais
+    # Para PostgreSQL (Neon/Supabase) com pool de conexões otimizado
     engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_size=10, max_overflow=20)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

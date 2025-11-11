@@ -4,11 +4,16 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from app.models import User
+import os
+from dotenv import load_dotenv
 
-# Configurações
-SECRET_KEY = "minha_chave_super_secreta_1234567890"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# Carrega variáveis de ambiente do arquivo .env
+load_dotenv()
+
+# Configurações (lidas de variáveis de ambiente)
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback-key-change-in-production")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -17,16 +22,20 @@ class AuthService:
     def verify_password(plain_password: str, hashed_password: str) -> bool:
         """Verifica se a senha plana corresponde ao hash"""
         # Bcrypt tem limite de 72 bytes - truncar se necessário
-        if len(plain_password.encode('utf-8')) > 72:
-            plain_password = plain_password[:72]
+        password_bytes = plain_password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+            plain_password = password_bytes.decode('utf-8', errors='ignore')
         return pwd_context.verify(plain_password, hashed_password)
 
     @staticmethod
     def get_password_hash(password: str) -> str:
         """Gera hash da senha"""
         # Bcrypt tem limite de 72 bytes - truncar se necessário
-        if len(password.encode('utf-8')) > 72:
-            password = password[:72]
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password_bytes = password_bytes[:72]
+            password = password_bytes.decode('utf-8', errors='ignore')
         return pwd_context.hash(password)
 
     @staticmethod

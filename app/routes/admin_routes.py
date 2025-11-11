@@ -74,6 +74,12 @@ def list_admins(db: Session = Depends(get_db)):
     users = UserService.get_users_by_role(db, "admin")
     return [UserResponse.from_orm(u) for u in users]
 
+@router.get('/todos', response_model=List[UserResponse])
+def list_all_admins(db: Session = Depends(get_db)):
+    """Lista apenas administradores (role=admin)"""
+    users = UserService.get_users_by_role(db, "admin")
+    return [UserResponse.from_orm(u) for u in users]
+
 @router.post('/users/{user_id}/reset-password')
 def reset_user_password(user_id: int, payload: ResetPasswordPayload, db: Session = Depends(get_db)):
     """Redefine a senha de um usuário (admin)"""
