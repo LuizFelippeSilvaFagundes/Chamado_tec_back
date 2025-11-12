@@ -90,20 +90,7 @@ async def startup_event():
     print(f"📍 Ambiente: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
     print("🌐 Servidor pronto para receber requisições!")
-    # Inicializar banco em background para não travar startup
-    try:
-        asyncio.create_task(init_db_async())
-    except Exception as e:
-        print(f"⚠️ Erro ao criar task de inicialização do banco: {e}")
-
-async def init_db_async():
-    """Inicializa banco de dados de forma assíncrona"""
-    try:
-        await asyncio.sleep(2)  # Aguardar um pouco antes de inicializar
-        print("⏳ Inicializando banco de dados em background...")
-        init_db()
-    except Exception as e:
-        print(f"⚠️ Erro na inicialização assíncrona do banco: {e}")
+    print("📝 Endpoints disponíveis: /, /health, /docs")
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
@@ -141,14 +128,24 @@ def get_allowed_origins():
     return origins
 
 # Configurar CORS
-origins = get_allowed_origins()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins if "*" not in origins else ["*"],
-    allow_credentials=True if "*" not in origins else False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+origins_list = get_allowed_origins()
+# Se for "*", não usar allow_credentials (incompatível)
+if "*" in origins_list:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Incluir rotas organizadas por módulos
 app.include_router(auth_router)
@@ -159,14 +156,7 @@ app.include_router(admin_router)
 app.include_router(avatar_router)
 app.include_router(attachment_router)
 
-# Arquivos estáticos (avatars)
-# Garante que a pasta 'static' exista e usa caminho absoluto para evitar erros
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
-
-# Root endpoint
+# Root endpoint (definir antes dos arquivos estáticos)
 @app.get("/")
 def root():
     """Endpoint raiz"""
@@ -189,6 +179,13 @@ def health_check():
         "environment": environment,
         "message": "Server is running"
     }
+
+# Arquivos estáticos (avatars)
+# Garante que a pasta 'static' exista e usa caminho absoluto para evitar erros
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
 
 # Rodar servidor diretamente
 if __name__ == "__main__":
