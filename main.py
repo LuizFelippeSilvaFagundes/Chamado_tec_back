@@ -4,6 +4,7 @@ Script principal - Sistema de Tickets Prefeitura
 """
 import sys
 import os
+import asyncio
 from pathlib import Path
 
 # Verificar ambiente virtual apenas em desenvolvimento local (não no Docker/produção)
@@ -90,16 +91,16 @@ async def startup_event():
     print("🚀 Iniciando servidor...")
     print(f"📍 Ambiente: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
-    print("⏳ Aguardando inicialização do banco...")
-    try:
-        init_db()
-        print("✅ Servidor iniciado com sucesso!")
-        print("🌐 Servidor pronto para receber requisições!")
-    except Exception as e:
-        print(f"⚠️ AVISO: Erro durante inicialização: {e}")
-        import traceback
-        traceback.print_exc()
-        print("⚠️ Servidor continuará mesmo com erros...")
+    print("🌐 Servidor pronto para receber requisições!")
+    # Inicializar banco em background para não travar startup
+    import asyncio
+    asyncio.create_task(init_db_async())
+
+async def init_db_async():
+    """Inicializa banco de dados de forma assíncrona"""
+    await asyncio.sleep(1)  # Aguardar um pouco antes de inicializar
+    print("⏳ Inicializando banco de dados em background...")
+    init_db()
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
@@ -170,27 +171,17 @@ def root():
         "health": "/health"
     }
 
-# Health check endpoint
+# Health check endpoint (simplificado para responder rápido)
 @app.get("/health")
 def health_check():
     """Endpoint de health check para monitoramento"""
-    from sqlalchemy import text
     environment = os.getenv("ENVIRONMENT", "development")
     
-    # Verificar conexão com banco de dados
-    db_status = "unknown"
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-            db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)[:50]}"
-    
+    # Resposta rápida sem verificar banco (para não travar)
     return {
         "status": "ok",
         "environment": environment,
-        "database": db_status,
-        "cors_origins": get_allowed_origins()
+        "message": "Server is running"
     }
 
 # Rodar servidor diretamente

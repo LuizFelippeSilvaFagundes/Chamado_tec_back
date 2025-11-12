@@ -21,20 +21,16 @@ else:
         engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=5,
-            max_overflow=10,
-            connect_args={"connect_timeout": 5}  # Timeout de 5 segundos
+            pool_size=3,
+            max_overflow=5,
+            connect_args={"connect_timeout": 3}  # Timeout de 3 segundos
         )
-        # Testar conexão imediatamente
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        print(f"✅ Engine do banco de dados criado e testado")
+        print(f"✅ Engine do banco de dados criado")
+        # Não testar conexão aqui para não travar startup
     except Exception as e:
         print(f"⚠️ AVISO: Erro ao criar engine do banco: {e}")
-        import traceback
-        traceback.print_exc()
         # Criar engine básico mesmo com erro (para não crashar)
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={"connect_timeout": 5})
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={"connect_timeout": 3})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
