@@ -139,7 +139,11 @@ if __name__ == "__main__":
     import uvicorn
     environment = os.getenv("ENVIRONMENT", "development")
     host = "0.0.0.0" if environment == "production" else "127.0.0.1"
-    port = int(os.getenv("PORT", "8000"))
+    try:
+        port = int(os.getenv("PORT", "8000"))
+    except ValueError:
+        port = 8000
+        print(f"⚠️ AVISO: PORT tem valor inválido, usando padrão {port}")
     reload = environment != "production"
     
     uvicorn.run("main:app", host=host, port=port, reload=reload)
