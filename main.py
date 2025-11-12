@@ -72,15 +72,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configurar FastAPI com tratamento de erros para OpenAPI
+# Configurar FastAPI - desabilitar Swagger temporariamente para evitar 502
+# O Swagger será reabilitado após identificar o problema
+DISABLE_SWAGGER = os.getenv("DISABLE_SWAGGER", "false").lower() == "true"
+
 try:
-    app = FastAPI(
-        title="Sistema de Tickets - Prefeitura", 
-        version="1.0.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json"
-    )
+    if DISABLE_SWAGGER:
+        logger.warning("⚠️ Swagger desabilitado temporariamente")
+        app = FastAPI(
+            title="Sistema de Tickets - Prefeitura", 
+            version="1.0.0",
+            docs_url=None,  # Desabilitar Swagger
+            redoc_url=None,  # Desabilitar ReDoc
+            openapi_url=None  # Desabilitar OpenAPI
+        )
+    else:
+        app = FastAPI(
+            title="Sistema de Tickets - Prefeitura", 
+            version="1.0.0",
+            docs_url="/docs",
+            redoc_url="/redoc",
+            openapi_url="/openapi.json"
+        )
     logger.info("✅ FastAPI app criado com sucesso!")
 except Exception as e:
     logger.error(f"❌ Erro ao criar FastAPI app: {e}")
@@ -240,12 +253,13 @@ def root():
     }
 
 # Endpoint explícito para OpenAPI schema (para debug)
-@app.get("/openapi.json")
-def get_openapi_schema():
+# Este endpoint é chamado ANTES do handler padrão do FastAPI
+@app.get("/openapi.json", include_in_schema=False)
+async def get_openapi_schema():
     """Endpoint explícito para OpenAPI schema com tratamento de erros"""
     try:
         logger.info("📋 Gerando schema OpenAPI...")
-        # Tentar gerar o schema com timeout implícito
+        # Tentar gerar o schema
         schema = app.openapi()
         logger.info(f"✅ Schema OpenAPI gerado com sucesso! ({len(str(schema))} caracteres)")
         return schema
@@ -253,15 +267,36 @@ def get_openapi_schema():
         logger.error(f"❌ Erro ao gerar schema OpenAPI: {e}")
         logger.error(f"📍 Traceback: {traceback.format_exc()}")
         # Retornar schema mínimo em caso de erro
-        return {
-            "openapi": "3.1.0",
-            "info": {
-                "title": "Sistema de Tickets - Prefeitura",
-                "version": "1.0.0"
-            },
-            "paths": {},
-            "error": str(e)
-        }
+        return JSONResponse(
+            status_code=200,  # Retornar 200 mesmo com erro para evitar 502
+            content={
+                "openapi": "3.1.0",
+                "info": {
+                    "title": "Sistema de Tickets - Prefeitura",
+                    "version": "1.0.0"
+                },
+                "paths": {},
+                "error": str(e),
+                "message": "Schema OpenAPI gerado com erros, mas servidor está funcionando"
+            }
+        )
+
+# Endpoint alternativo para Swagger (se o padrão não funcionar)
+@app.get("/api-docs")
+def api_docs_info():
+    """Informações sobre a API"""
+    return {
+        "message": "API Sistema de Tickets - Prefeitura",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "test": "/test",
+            "test_db": "/test-db",
+            "docs": "/docs" if not DISABLE_SWAGGER else "desabilitado",
+            "openapi": "/openapi.json" if not DISABLE_SWAGGER else "desabilitado"
+        },
+        "status": "running"
+    }
 
 # Health check endpoint (simplificado para responder rápido)
 @app.get("/health")
