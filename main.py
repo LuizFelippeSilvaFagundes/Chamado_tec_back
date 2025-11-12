@@ -110,6 +110,28 @@ def get_allowed_origins():
     
     return origins
 
+# Root endpoint (definir primeiro para garantir que sempre funcione)
+@app.get("/")
+def root():
+    """Endpoint raiz"""
+    return {
+        "message": "Sistema de Tickets - Prefeitura API",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+# Health check endpoint (simplificado para responder rápido)
+@app.get("/health")
+def health_check():
+    """Endpoint de health check para monitoramento"""
+    environment = os.getenv("ENVIRONMENT", "development")
+    return {
+        "status": "ok",
+        "environment": environment,
+        "message": "Server is running"
+    }
+
 # Configurar CORS
 origins_list = get_allowed_origins()
 # Se for "*", não usar allow_credentials (incompatível)
@@ -131,40 +153,21 @@ else:
     )
 
 # Incluir rotas organizadas por módulos
-app.include_router(auth_router)
-app.include_router(user_router)
-app.include_router(ticket_router)
-app.include_router(tech_router)
-app.include_router(admin_router)
-app.include_router(avatar_router)
-app.include_router(attachment_router)
+try:
+    app.include_router(auth_router)
+    app.include_router(user_router)
+    app.include_router(ticket_router)
+    app.include_router(tech_router)
+    app.include_router(admin_router)
+    app.include_router(avatar_router)
+    app.include_router(attachment_router)
+    print("✅ Rotas registradas com sucesso!")
+except Exception as e:
+    print(f"⚠️ Erro ao registrar rotas: {e}")
+    import traceback
+    traceback.print_exc()
 
-# Root endpoint (definir antes dos arquivos estáticos)
-@app.get("/")
-def root():
-    """Endpoint raiz"""
-    return {
-        "message": "Sistema de Tickets - Prefeitura API",
-        "status": "running",
-        "docs": "/docs",
-        "health": "/health"
-    }
-
-# Health check endpoint (simplificado para responder rápido)
-@app.get("/health")
-def health_check():
-    """Endpoint de health check para monitoramento"""
-    environment = os.getenv("ENVIRONMENT", "development")
-    
-    # Resposta rápida sem verificar banco (para não travar)
-    return {
-        "status": "ok",
-        "environment": environment,
-        "message": "Server is running"
-    }
-
-# Arquivos estáticos (avatars)
-# Garante que a pasta 'static' exista e usa caminho absoluto para evitar erros
+# Arquivos estáticos (avatars) - por último para não interferir nas rotas
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
