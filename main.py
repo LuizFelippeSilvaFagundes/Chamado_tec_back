@@ -1,27 +1,44 @@
 #!/usr/bin/env python3
 """
-Script principal - Detecta e usa o ambiente virtual automaticamente
+Script principal - Sistema de Tickets Prefeitura
 """
 import sys
 import os
 from pathlib import Path
 
-# Detectar se está rodando fora do venv e usar o venv automaticamente
-if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-    # Não está no venv, tentar usar o venv do projeto
-    PROJECT_DIR = Path(__file__).resolve().parent
-    VENV_PYTHON = PROJECT_DIR / "venv" / "bin" / "python"
-    
-    if VENV_PYTHON.exists():
-        # Reexecutar usando o Python do venv
-        os.execv(str(VENV_PYTHON), [str(VENV_PYTHON)] + sys.argv)
-    else:
-        print("❌ Ambiente virtual não encontrado!")
-        print("📦 Execute: python3 -m venv venv")
-        print("📦 Depois: pip install -r requirements.txt")
-        sys.exit(1)
+# Verificar ambiente virtual apenas em desenvolvimento local (não no Docker/produção)
+# No Docker/Railway, o ambiente já está isolado e não precisa de venv
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+PORT = os.getenv("PORT")  # Railway/Docker sempre define PORT
+IS_DOCKER = (
+    os.path.exists("/.dockerenv") or  # Docker padrão
+    os.getenv("RAILWAY_ENVIRONMENT") is not None or  # Railway
+    os.getenv("RAILWAY") is not None or  # Railway (alternativo)
+    PORT is not None  # Se PORT está definido, provavelmente é deploy
+)
 
-import os
+# Apenas verificar venv em desenvolvimento local (não em Docker/Railway)
+if not IS_DOCKER and ENVIRONMENT == "development":
+    # Verificar se está no venv
+    in_venv = (
+        hasattr(sys, 'real_prefix') or
+        (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    )
+    
+    if not in_venv:
+        # Não está no venv, tentar usar o venv do projeto
+        PROJECT_DIR = Path(__file__).resolve().parent
+        VENV_PYTHON = PROJECT_DIR / "venv" / "bin" / "python"
+        
+        if VENV_PYTHON.exists():
+            # Reexecutar usando o Python do venv
+            os.execv(str(VENV_PYTHON), [str(VENV_PYTHON)] + sys.argv)
+        else:
+            print("❌ Ambiente virtual não encontrado!")
+            print("📦 Execute: python3 -m venv venv")
+            print("📦 Depois: pip install -r requirements.txt")
+            sys.exit(1)
+
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
