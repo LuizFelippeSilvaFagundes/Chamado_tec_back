@@ -73,7 +73,16 @@ def init_db():
 @app.on_event("startup")
 async def startup_event():
     """Evento executado ao iniciar o servidor"""
-    init_db()
+    print("🚀 Iniciando servidor...")
+    print(f"📍 Ambiente: {os.getenv('ENVIRONMENT', 'development')}")
+    print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
+    try:
+        init_db()
+        print("✅ Servidor iniciado com sucesso!")
+    except Exception as e:
+        print(f"❌ Erro ao iniciar servidor: {e}")
+        import traceback
+        traceback.print_exc()
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():

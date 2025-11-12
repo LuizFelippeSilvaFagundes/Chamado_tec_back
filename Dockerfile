@@ -23,5 +23,6 @@ COPY . .
 
 # Start command (Railway will set PORT env var)
 # Usar sh -c para expandir a variável PORT corretamente
-CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+# Adicionar --workers 1 para produção
+CMD sh -c "echo '🚀 Iniciando servidor na porta ${PORT:-8000}' && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"
 
