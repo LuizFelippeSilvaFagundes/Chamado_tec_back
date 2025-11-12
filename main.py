@@ -63,10 +63,13 @@ app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
 def init_db():
     """Cria todas as tabelas se não existirem"""
     try:
+        print("🔄 Criando tabelas do banco de dados...")
         Base.metadata.create_all(bind=engine)
         print("✅ Banco de dados inicializado!")
     except Exception as e:
         print(f"⚠️ AVISO: Erro ao inicializar banco de dados: {e}")
+        import traceback
+        traceback.print_exc()
         print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
 
 # Inicializa o banco ao iniciar o app (usando startup event)

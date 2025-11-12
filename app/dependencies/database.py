@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app.models import Base
 import os
@@ -21,15 +21,20 @@ else:
         engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20,
-            connect_args={"connect_timeout": 10}  # Timeout de 10 segundos
+            pool_size=5,
+            max_overflow=10,
+            connect_args={"connect_timeout": 5}  # Timeout de 5 segundos
         )
-        print(f"✅ Engine do banco de dados criado: {DATABASE_URL[:20]}...")
+        # Testar conexão imediatamente
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        print(f"✅ Engine do banco de dados criado e testado")
     except Exception as e:
         print(f"⚠️ AVISO: Erro ao criar engine do banco: {e}")
-        # Em produção, não podemos continuar sem banco, mas vamos tentar mesmo assim
-        engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+        import traceback
+        traceback.print_exc()
+        # Criar engine básico mesmo com erro (para não crashar)
+        engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args={"connect_timeout": 5})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
