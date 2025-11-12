@@ -62,15 +62,26 @@ app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
 # === CRIAÇÃO AUTOMÁTICA DO BANCO E TABELAS ===
 def init_db():
     """Cria todas as tabelas se não existirem"""
-    try:
-        print("🔄 Criando tabelas do banco de dados...")
-        Base.metadata.create_all(bind=engine)
-        print("✅ Banco de dados inicializado!")
-    except Exception as e:
-        print(f"⚠️ AVISO: Erro ao inicializar banco de dados: {e}")
-        import traceback
-        traceback.print_exc()
-        print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
+    import time
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"🔄 Tentativa {attempt + 1}/{max_retries}: Criando tabelas do banco de dados...")
+            Base.metadata.create_all(bind=engine)
+            print("✅ Banco de dados inicializado!")
+            return
+        except Exception as e:
+            print(f"⚠️ Tentativa {attempt + 1} falhou: {e}")
+            if attempt < max_retries - 1:
+                print(f"⏳ Aguardando {retry_delay} segundos antes de tentar novamente...")
+                time.sleep(retry_delay)
+            else:
+                print(f"❌ Erro ao inicializar banco de dados após {max_retries} tentativas: {e}")
+                import traceback
+                traceback.print_exc()
+                print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
 
 # Inicializa o banco ao iniciar o app (usando startup event)
 @app.on_event("startup")
