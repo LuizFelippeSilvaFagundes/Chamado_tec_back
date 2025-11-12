@@ -10,10 +10,21 @@ from dotenv import load_dotenv
 # Carrega variáveis de ambiente do arquivo .env
 load_dotenv()
 
+def get_int_env(key: str, default: int) -> int:
+    """Obtém variável de ambiente como inteiro com tratamento de erro"""
+    value = os.getenv(key)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        print(f"⚠️ AVISO: {key} tem valor inválido '{value}', usando padrão {default}")
+        return default
+
 # Configurações (lidas de variáveis de ambiente)
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-key-change-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+ACCESS_TOKEN_EXPIRE_MINUTES = get_int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
