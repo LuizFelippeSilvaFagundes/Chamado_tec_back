@@ -64,8 +64,8 @@ app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
 def init_db():
     """Cria todas as tabelas se não existirem"""
     import time
-    max_retries = 3
-    retry_delay = 2
+    max_retries = 2
+    retry_delay = 1
     
     for attempt in range(max_retries):
         try:
@@ -79,9 +79,7 @@ def init_db():
                 print(f"⏳ Aguardando {retry_delay} segundos antes de tentar novamente...")
                 time.sleep(retry_delay)
             else:
-                print(f"❌ Erro ao inicializar banco de dados após {max_retries} tentativas: {e}")
-                import traceback
-                traceback.print_exc()
+                print(f"❌ Erro ao inicializar banco de dados após {max_retries} tentativas")
                 print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
 
 # Inicializa o banco ao iniciar o app (usando startup event)
@@ -93,14 +91,19 @@ async def startup_event():
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
     print("🌐 Servidor pronto para receber requisições!")
     # Inicializar banco em background para não travar startup
-    import asyncio
-    asyncio.create_task(init_db_async())
+    try:
+        asyncio.create_task(init_db_async())
+    except Exception as e:
+        print(f"⚠️ Erro ao criar task de inicialização do banco: {e}")
 
 async def init_db_async():
     """Inicializa banco de dados de forma assíncrona"""
-    await asyncio.sleep(1)  # Aguardar um pouco antes de inicializar
-    print("⏳ Inicializando banco de dados em background...")
-    init_db()
+    try:
+        await asyncio.sleep(2)  # Aguardar um pouco antes de inicializar
+        print("⏳ Inicializando banco de dados em background...")
+        init_db()
+    except Exception as e:
+        print(f"⚠️ Erro na inicialização assíncrona do banco: {e}")
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
@@ -130,16 +133,19 @@ def get_allowed_origins():
     # TODO: Configurar ALLOWED_ORIGINS após deploy do frontend
     if not origins:
         if environment == "production":
-            return ["*"]  # Permitir todas temporariamente
+            # Em produção, permitir todas as origens se não configurado
+            return ["*"]
         else:
             return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
     
     return origins
 
+# Configurar CORS
+origins = get_allowed_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_allowed_origins(),
-    allow_credentials=True,
+    allow_origins=origins if "*" not in origins else ["*"],
+    allow_credentials=True if "*" not in origins else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
