@@ -79,13 +79,16 @@ async def startup_event():
     print("🚀 Iniciando servidor...")
     print(f"📍 Ambiente: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
+    print("⏳ Aguardando inicialização do banco...")
     try:
         init_db()
         print("✅ Servidor iniciado com sucesso!")
+        print("🌐 Servidor pronto para receber requisições!")
     except Exception as e:
-        print(f"❌ Erro ao iniciar servidor: {e}")
+        print(f"⚠️ AVISO: Erro durante inicialização: {e}")
         import traceback
         traceback.print_exc()
+        print("⚠️ Servidor continuará mesmo com erros...")
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
@@ -144,6 +147,17 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
+
+# Root endpoint
+@app.get("/")
+def root():
+    """Endpoint raiz"""
+    return {
+        "message": "Sistema de Tickets - Prefeitura API",
+        "status": "running",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 # Health check endpoint
 @app.get("/health")
