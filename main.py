@@ -60,28 +60,6 @@ load_dotenv()
 
 app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
 
-# === CRIAÇÃO AUTOMÁTICA DO BANCO E TABELAS ===
-def init_db():
-    """Cria todas as tabelas se não existirem"""
-    import time
-    max_retries = 2
-    retry_delay = 1
-    
-    for attempt in range(max_retries):
-        try:
-            print(f"🔄 Tentativa {attempt + 1}/{max_retries}: Criando tabelas do banco de dados...")
-            Base.metadata.create_all(bind=engine)
-            print("✅ Banco de dados inicializado!")
-            return
-        except Exception as e:
-            print(f"⚠️ Tentativa {attempt + 1} falhou: {e}")
-            if attempt < max_retries - 1:
-                print(f"⏳ Aguardando {retry_delay} segundos antes de tentar novamente...")
-                time.sleep(retry_delay)
-            else:
-                print(f"❌ Erro ao inicializar banco de dados após {max_retries} tentativas")
-                print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
-
 # Inicializa o banco ao iniciar o app (usando startup event)
 @app.on_event("startup")
 async def startup_event():
@@ -91,6 +69,7 @@ async def startup_event():
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
     print("🌐 Servidor pronto para receber requisições!")
     print("📝 Endpoints disponíveis: /, /health, /docs")
+    # Não inicializar banco no startup - será criado automaticamente na primeira requisição
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
