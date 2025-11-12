@@ -111,10 +111,13 @@ def get_allowed_origins():
             if origin not in origins:
                 origins.append(origin)
     
-    # Se não houver origens configuradas e estiver em produção, retornar lista vazia (mais seguro)
-    # Em desenvolvimento, permitir todas as origens localhost
-    if not origins and environment != "production":
-        return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+    # Se não houver origens configuradas e estiver em produção, permitir todas (temporário)
+    # TODO: Configurar ALLOWED_ORIGINS após deploy do frontend
+    if not origins:
+        if environment == "production":
+            return ["*"]  # Permitir todas temporariamente
+        else:
+            return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
     
     return origins
 
