@@ -139,17 +139,23 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = time.time()
         
-        # Log da requisição
-        logger.info(f"📥 {request.method} {request.url.path}")
+        # Log da requisição com mais detalhes
+        logger.info(f"📥 {request.method} {request.url.path} - Client: {request.client.host if request.client else 'unknown'}")
         
         try:
             response = await call_next(request)
             process_time = time.time() - start_time
             logger.info(f"📤 {request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
+            
+            # Log de warning se a requisição demorar muito
+            if process_time > 5.0:
+                logger.warning(f"⚠️ Requisição lenta: {request.method} {request.url.path} levou {process_time:.3f}s")
+            
             return response
         except Exception as e:
             process_time = time.time() - start_time
             logger.error(f"❌ {request.method} {request.url.path} - ERRO após {process_time:.3f}s: {e}")
+            logger.error(f"📍 Traceback: {traceback.format_exc()}")
             raise
 
 app.add_middleware(LoggingMiddleware)
@@ -257,8 +263,35 @@ def test_endpoint():
         "timestamp": str(os.path.getmtime(__file__) if os.path.exists(__file__) else "unknown")
     }
 
+# Endpoint de teste com banco de dados (simula uma rota da aplicação)
+@app.get("/test-db")
+def test_db_endpoint():
+    """Endpoint de teste que usa banco de dados"""
+    try:
+        from sqlalchemy import text
+        from app.dependencies.database import engine
+        
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1 as test"))
+            row = result.fetchone()
+            
+        return {
+            "status": "ok",
+            "message": "Endpoint com banco de dados funcionando",
+            "database": "connected",
+            "test_query": row[0] if row else None
+        }
+    except Exception as e:
+        logger.error(f"❌ Erro no teste de banco: {e}")
+        return {
+            "status": "error",
+            "message": "Erro ao conectar com banco de dados",
+            "error": str(e)
+        }
+
 # Incluir rotas organizadas por módulos
 try:
+    logger.info("🔧 Registrando rotas...")
     app.include_router(auth_router)
     app.include_router(user_router)
     app.include_router(ticket_router)
@@ -266,8 +299,11 @@ try:
     app.include_router(admin_router)
     app.include_router(avatar_router)
     app.include_router(attachment_router)
+    logger.info("✅ Rotas registradas com sucesso!")
     print("✅ Rotas registradas com sucesso!")
 except Exception as e:
+    logger.error(f"⚠️ Erro ao registrar rotas: {e}")
+    logger.error(f"📍 Traceback: {traceback.format_exc()}")
     print(f"⚠️ Erro ao registrar rotas: {e}")
     import traceback
     traceback.print_exc()
