@@ -72,27 +72,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configurar FastAPI - desabilitar Swagger temporariamente para evitar 502
-# O Swagger será reabilitado após identificar o problema
-DISABLE_SWAGGER = os.getenv("DISABLE_SWAGGER", "false").lower() == "true"
+# Configurar FastAPI - desabilitar Swagger por padrão para evitar 502
+# O Swagger pode ser reabilitado definindo ENABLE_SWAGGER=true
+ENABLE_SWAGGER = os.getenv("ENABLE_SWAGGER", "false").lower() == "true"
 
 try:
-    if DISABLE_SWAGGER:
-        logger.warning("⚠️ Swagger desabilitado temporariamente")
-        app = FastAPI(
-            title="Sistema de Tickets - Prefeitura", 
-            version="1.0.0",
-            docs_url=None,  # Desabilitar Swagger
-            redoc_url=None,  # Desabilitar ReDoc
-            openapi_url=None  # Desabilitar OpenAPI
-        )
-    else:
+    if ENABLE_SWAGGER:
+        logger.info("✅ Swagger habilitado")
         app = FastAPI(
             title="Sistema de Tickets - Prefeitura", 
             version="1.0.0",
             docs_url="/docs",
             redoc_url="/redoc",
             openapi_url="/openapi.json"
+        )
+    else:
+        logger.info("⚠️ Swagger desabilitado (defina ENABLE_SWAGGER=true para habilitar)")
+        app = FastAPI(
+            title="Sistema de Tickets - Prefeitura", 
+            version="1.0.0",
+            docs_url=None,  # Desabilitar Swagger
+            redoc_url=None,  # Desabilitar ReDoc
+            openapi_url=None  # Desabilitar OpenAPI
         )
     logger.info("✅ FastAPI app criado com sucesso!")
 except Exception as e:
@@ -292,8 +293,8 @@ def api_docs_info():
             "health": "/health",
             "test": "/test",
             "test_db": "/test-db",
-            "docs": "/docs" if not DISABLE_SWAGGER else "desabilitado",
-            "openapi": "/openapi.json" if not DISABLE_SWAGGER else "desabilitado"
+            "docs": "/docs" if ENABLE_SWAGGER else "desabilitado (defina ENABLE_SWAGGER=true)",
+            "openapi": "/openapi.json" if ENABLE_SWAGGER else "desabilitado (defina ENABLE_SWAGGER=true)"
         },
         "status": "running"
     }
