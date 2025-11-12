@@ -57,16 +57,23 @@ from app.routes import (
 # Carregar variáveis de ambiente
 load_dotenv()
 
+app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
+
 # === CRIAÇÃO AUTOMÁTICA DO BANCO E TABELAS ===
 def init_db():
     """Cria todas as tabelas se não existirem"""
-    Base.metadata.create_all(bind=engine)
-    print("Banco de dados inicializado!")
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✅ Banco de dados inicializado!")
+    except Exception as e:
+        print(f"⚠️ AVISO: Erro ao inicializar banco de dados: {e}")
+        print("⚠️ O servidor continuará, mas algumas funcionalidades podem não funcionar.")
 
-# Inicializa o banco ao iniciar o app
-init_db()
-
-app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
+# Inicializa o banco ao iniciar o app (usando startup event)
+@app.on_event("startup")
+async def startup_event():
+    """Evento executado ao iniciar o servidor"""
+    init_db()
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
@@ -127,10 +134,22 @@ app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
 @app.get("/health")
 def health_check():
     """Endpoint de health check para monitoramento"""
+    from sqlalchemy import text
     environment = os.getenv("ENVIRONMENT", "development")
+    
+    # Verificar conexão com banco de dados
+    db_status = "unknown"
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+            db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)[:50]}"
+    
     return {
         "status": "ok",
         "environment": environment,
+        "database": db_status,
         "cors_origins": get_allowed_origins()
     }
 

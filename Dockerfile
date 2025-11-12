@@ -21,9 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Expose port (Railway will set PORT env var)
-EXPOSE $PORT
-
-# Start command
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+# Start command (Railway will set PORT env var)
+# Usar sh -c para expandir a variável PORT corretamente
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
 
