@@ -58,18 +58,22 @@ from app.routes import (
 # Carregar variáveis de ambiente
 load_dotenv()
 
-app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
+app = FastAPI(
+    title="Sistema de Tickets - Prefeitura", 
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
 
 # Inicializa o banco ao iniciar o app (usando startup event)
 @app.on_event("startup")
 async def startup_event():
     """Evento executado ao iniciar o servidor"""
-    print("🚀 Iniciando servidor...")
+    print("🚀 Servidor FastAPI iniciado!")
     print(f"📍 Ambiente: {os.getenv('ENVIRONMENT', 'development')}")
     print(f"🔌 Porta: {os.getenv('PORT', '8000')}")
     print("🌐 Servidor pronto para receber requisições!")
-    print("📝 Endpoints disponíveis: /, /health, /docs")
-    # Não inicializar banco no startup - será criado automaticamente na primeira requisição
 
 # Configuração de CORS - Seguro para produção
 def get_allowed_origins():
