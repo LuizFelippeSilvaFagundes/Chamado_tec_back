@@ -24,43 +24,9 @@ def register_admin(admin: AdminRegister, db: Session = Depends(get_db)):
     return AuthController.register_admin(db, admin)
 
 @router.post("/login", include_in_schema=True)
-async def login(user: UserLogin, db: Session = Depends(get_db)):
-    """Login de usuários com timeout"""
-    import logging
-    import asyncio
-    from fastapi import HTTPException, status
-    
-    logger = logging.getLogger(__name__)
-    
-    try:
-        logger.info(f"🔐 Tentativa de login para usuário: {user.username}")
-        
-        # Executar login com timeout de 10 segundos
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(AuthController.login, db, user),
-                timeout=10.0
-            )
-            logger.info(f"✅ Login bem-sucedido para: {user.username}")
-            return result
-        except asyncio.TimeoutError:
-            logger.error(f"⏱️ Timeout no login para {user.username} (10s)")
-            raise HTTPException(
-                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-                detail="Tempo de resposta excedido. Tente novamente."
-            )
-    except HTTPException:
-        # Re-raise HTTPExceptions (incluindo timeout)
-        raise
-    except Exception as e:
-        logger.error(f"❌ Erro no login para {user.username}: {e}")
-        import traceback
-        logger.error(f"📍 Traceback: {traceback.format_exc()}")
-        # Retornar erro HTTP em vez de crashar
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro interno no servidor: {str(e)}"
-        )
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    """Login de usuários"""
+    return AuthController.login(db, user)
 
 @router.get("/me")
 def get_me(username: str = None, db: Session = Depends(get_db)):

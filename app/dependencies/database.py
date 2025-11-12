@@ -21,10 +21,8 @@ else:
         engine = create_engine(
             DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=2,  # Reduzir pool para evitar muitas conexões
-            max_overflow=2,  # Reduzir overflow
-            pool_timeout=5,  # Timeout para obter conexão do pool
-            connect_args={"connect_timeout": 5}  # Timeout de conexão aumentado para 5 segundos
+            pool_size=5,
+            max_overflow=10
         )
         print(f"✅ Engine do banco de dados criado")
         # Não testar conexão aqui para não travar startup
