@@ -72,13 +72,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Sistema de Tickets - Prefeitura", 
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
-)
+# Configurar FastAPI com tratamento de erros para OpenAPI
+try:
+    app = FastAPI(
+        title="Sistema de Tickets - Prefeitura", 
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json"
+    )
+    logger.info("✅ FastAPI app criado com sucesso!")
+except Exception as e:
+    logger.error(f"❌ Erro ao criar FastAPI app: {e}")
+    # Criar app básico se houver erro
+    app = FastAPI(
+        title="Sistema de Tickets - Prefeitura", 
+        version="1.0.0"
+    )
 
 # Configuração de CORS (deve vir antes dos outros middlewares)
 def get_allowed_origins():
@@ -228,6 +238,30 @@ def root():
         "docs": "/docs",
         "health": "/health"
     }
+
+# Endpoint explícito para OpenAPI schema (para debug)
+@app.get("/openapi.json")
+def get_openapi_schema():
+    """Endpoint explícito para OpenAPI schema com tratamento de erros"""
+    try:
+        logger.info("📋 Gerando schema OpenAPI...")
+        # Tentar gerar o schema com timeout implícito
+        schema = app.openapi()
+        logger.info(f"✅ Schema OpenAPI gerado com sucesso! ({len(str(schema))} caracteres)")
+        return schema
+    except Exception as e:
+        logger.error(f"❌ Erro ao gerar schema OpenAPI: {e}")
+        logger.error(f"📍 Traceback: {traceback.format_exc()}")
+        # Retornar schema mínimo em caso de erro
+        return {
+            "openapi": "3.1.0",
+            "info": {
+                "title": "Sistema de Tickets - Prefeitura",
+                "version": "1.0.0"
+            },
+            "paths": {},
+            "error": str(e)
+        }
 
 # Health check endpoint (simplificado para responder rápido)
 @app.get("/health")
