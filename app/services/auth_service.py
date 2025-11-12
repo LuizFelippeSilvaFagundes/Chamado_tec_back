@@ -69,13 +69,30 @@ class AuthService:
     @staticmethod
     def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
         """Autentica usuário por username e senha"""
-        from app.services.user_service import UserService
-        user = UserService.get_user_by_username(db, username)
-        if not user:
-            return None
-        if not AuthService.verify_password(password, user.hashed_password):
-            return None
-        return user
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            logger.info(f"🔍 Buscando usuário: {username}")
+            from app.services.user_service import UserService
+            user = UserService.get_user_by_username(db, username)
+            
+            if not user:
+                logger.warning(f"⚠️ Usuário não encontrado: {username}")
+                return None
+                
+            logger.info(f"✅ Usuário encontrado: {username}, verificando senha...")
+            if not AuthService.verify_password(password, user.hashed_password):
+                logger.warning(f"⚠️ Senha incorreta para: {username}")
+                return None
+                
+            logger.info(f"✅ Autenticação bem-sucedida para: {username}")
+            return user
+        except Exception as e:
+            logger.error(f"❌ Erro ao autenticar usuário {username}: {e}")
+            import traceback
+            logger.error(f"📍 Traceback: {traceback.format_exc()}")
+            raise
 
     @staticmethod
     def get_current_user_from_token(db: Session, token: str) -> Optional[User]:

@@ -37,7 +37,20 @@ class UserService:
     @staticmethod
     def get_user_by_username(db: Session, username: str) -> Optional[User]:
         """Busca usuário por username"""
-        return db.query(User).filter(User.username == username).first()
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            logger.info(f"🔍 Executando query para buscar usuário: {username}")
+            user = db.query(User).filter(User.username == username).first()
+            logger.info(f"✅ Query executada com sucesso para: {username}")
+            return user
+        except Exception as e:
+            logger.error(f"❌ Erro ao buscar usuário {username} no banco: {e}")
+            import traceback
+            logger.error(f"📍 Traceback: {traceback.format_exc()}")
+            # Re-raise para que o erro seja tratado no nível superior
+            raise
 
     @staticmethod
     def get_user_by_email(db: Session, email: Optional[str]) -> Optional[User]:

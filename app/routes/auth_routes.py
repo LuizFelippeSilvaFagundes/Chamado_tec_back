@@ -26,7 +26,20 @@ def register_admin(admin: AdminRegister, db: Session = Depends(get_db)):
 @router.post("/login", include_in_schema=True)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     """Login de usuários"""
-    return AuthController.login(db, user)
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        logger.info(f"🔐 Tentativa de login para usuário: {user.username}")
+        result = AuthController.login(db, user)
+        logger.info(f"✅ Login bem-sucedido para: {user.username}")
+        return result
+    except Exception as e:
+        logger.error(f"❌ Erro no login para {user.username}: {e}")
+        import traceback
+        logger.error(f"📍 Traceback: {traceback.format_exc()}")
+        # Re-raise para que o tratamento de erros global capture
+        raise
 
 @router.get("/me")
 def get_me(username: str = None, db: Session = Depends(get_db)):

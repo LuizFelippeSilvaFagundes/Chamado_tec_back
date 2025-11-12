@@ -36,8 +36,17 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():
     """Dependência para obter sessão do banco de dados"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     db = SessionLocal()
     try:
+        logger.debug("🔌 Sessão do banco de dados criada")
         yield db
+    except Exception as e:
+        logger.error(f"❌ Erro na sessão do banco: {e}")
+        db.rollback()
+        raise
     finally:
+        logger.debug("🔌 Fechando sessão do banco de dados")
         db.close()
