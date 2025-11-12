@@ -1,8 +1,32 @@
+#!/usr/bin/env python3
+"""
+Script principal - Detecta e usa o ambiente virtual automaticamente
+"""
+import sys
+import os
+from pathlib import Path
+
+# Detectar se está rodando fora do venv e usar o venv automaticamente
+if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+    # Não está no venv, tentar usar o venv do projeto
+    PROJECT_DIR = Path(__file__).resolve().parent
+    VENV_PYTHON = PROJECT_DIR / "venv" / "bin" / "python"
+    
+    if VENV_PYTHON.exists():
+        # Reexecutar usando o Python do venv
+        os.execv(str(VENV_PYTHON), [str(VENV_PYTHON)] + sys.argv)
+    else:
+        print("❌ Ambiente virtual não encontrado!")
+        print("📦 Execute: python3 -m venv venv")
+        print("📦 Depois: pip install -r requirements.txt")
+        sys.exit(1)
+
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.dependencies.database import Base, engine
-from pathlib import Path
 from app.routes import (
     auth_router,
     user_router,
@@ -12,6 +36,9 @@ from app.routes import (
     avatar_router,
     attachment_router
 )
+
+# Carregar variáveis de ambiente
+load_dotenv()
 
 # === CRIAÇÃO AUTOMÁTICA DO BANCO E TABELAS ===
 def init_db():
@@ -24,17 +51,40 @@ init_db()
 
 app = FastAPI(title="Sistema de Tickets - Prefeitura", version="1.0.0")
 
-# Configuração de CORS
-origins = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "*"
-]
+# Configuração de CORS - Seguro para produção
+def get_allowed_origins():
+    """Retorna lista de origens permitidas baseada em variáveis de ambiente"""
+    env_origins = os.getenv("ALLOWED_ORIGINS", "")
+    environment = os.getenv("ENVIRONMENT", "development")
+    
+    if env_origins:
+        # Separar por vírgula e remover espaços
+        origins = [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    else:
+        origins = []
+    
+    # Em desenvolvimento, adicionar localhost
+    if environment != "production":
+        development_origins = [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+        # Adicionar apenas se não estiverem já na lista
+        for origin in development_origins:
+            if origin not in origins:
+                origins.append(origin)
+    
+    # Se não houver origens configuradas e estiver em produção, retornar lista vazia (mais seguro)
+    # Em desenvolvimento, permitir todas as origens localhost
+    if not origins and environment != "production":
+        return ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+    
+    return origins
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -56,7 +106,23 @@ STATIC_DIR = BASE_DIR / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount('/static', StaticFiles(directory=str(STATIC_DIR)), name='static')
 
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    """Endpoint de health check para monitoramento"""
+    environment = os.getenv("ENVIRONMENT", "development")
+    return {
+        "status": "ok",
+        "environment": environment,
+        "cors_origins": get_allowed_origins()
+    }
+
 # Rodar servidor diretamente
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    environment = os.getenv("ENVIRONMENT", "development")
+    host = "0.0.0.0" if environment == "production" else "127.0.0.1"
+    port = int(os.getenv("PORT", "8000"))
+    reload = environment != "production"
+    
+    uvicorn.run("main:app", host=host, port=port, reload=reload)
